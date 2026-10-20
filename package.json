@@ -1,0 +1,9 @@
+{
+  "name": "cineweb",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CineWeb movie website using Vercel Functions and Supabase",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0"
+  }
+}
