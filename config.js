@@ -2,5 +2,5 @@
 window.APP_CONFIG = {
   SUPABASE_URL: "https://qrfdzhrwdqoalmfucgsc.supabase.co",
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_K0JZpjnxFyQKLlGjbplTNg_TO-XiBzZ",
-  INSTAGRAM_USERNAME: "https://www.instagram.com/nyctophile__307?rpxt=MnRyaWpvOGw1dm1z"
+  INSTAGRAM_USERNAME: "nyctophile__307"
 };
