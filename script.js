@@ -6,6 +6,7 @@
   let featuredIndex = 0;
   let featuredMovie = null;
   let scrollObserver = null;
+  let backdropRequestId = 0;
 
   const $ = id => document.getElementById(id);
 
@@ -85,7 +86,7 @@
       }
 
       .hero-backdrop.cw-changing {
-        opacity: .65;
+        opacity: .85;
         transform: scale(1.01);
       }
 
@@ -171,9 +172,9 @@
   function setupScrollAnimations(root) {
     if (!root) return;
 
-    if (scrollObserver) scrollObserver.disconnect();
-
     const cards = root.querySelectorAll('.movie-card');
+
+    if (scrollObserver) scrollObserver.disconnect();
 
     if (!('IntersectionObserver' in window)) {
       cards.forEach(card => card.classList.add('cw-visible'));
@@ -193,7 +194,9 @@
     });
 
     cards.forEach((card, index) => {
-      card.style.transitionDelay = `${Math.min(index % 6, 5) * 65}ms`;
+      card.style.transitionDelay =
+        `${Math.min(index % 6, 5) * 65}ms`;
+
       scrollObserver.observe(card);
     });
   }
@@ -205,6 +208,7 @@
 
     window.setTimeout(() => {
       const id = Number(card.dataset.movieId);
+
       if (Number.isFinite(id) && id > 0) {
         openMovie(id);
       }
@@ -217,6 +221,7 @@
 
   function setInstagramFooter() {
     const config = window.APP_CONFIG || {};
+
     const raw = String(
       config.INSTAGRAM_USERNAME || 'your_instagram_username'
     ).trim().replace(/^@/, '');
@@ -225,7 +230,8 @@
     const handle = $('instagramHandle');
 
     if (link) {
-      link.href = `https://www.instagram.com/${encodeURIComponent(raw)}/`;
+      link.href =
+        `https://www.instagram.com/${encodeURIComponent(raw)}/`;
     }
 
     if (handle) handle.textContent = `@${raw}`;
@@ -381,6 +387,7 @@
     target.querySelectorAll('button').forEach(button => {
       button.addEventListener('click', () => {
         const value = button.dataset.filterValue;
+
         const filtered = movies.filter(
           movie => String(movie[field]) === value
         );
@@ -392,7 +399,8 @@
         }
 
         if ($('empty')) {
-          $('empty').style.display = filtered.length ? 'none' : 'block';
+          $('empty').style.display =
+            filtered.length ? 'none' : 'block';
         }
 
         $('trending')?.scrollIntoView({ behavior: 'smooth' });
@@ -401,8 +409,85 @@
   }
 
   // =========================
-  // FEATURED HERO
+  // FEATURED BACKDROP FIX
   // =========================
+
+  function setBackdropImage(element, primaryUrl, fallbackUrl = '') {
+    if (!element) return;
+
+    const requestId = ++backdropRequestId;
+
+    const cleanUrl = value => {
+      const url = String(value || '').trim();
+      if (!url) return '';
+
+      try {
+        const parsed = new URL(url, window.location.href);
+
+        return ['http:', 'https:'].includes(parsed.protocol)
+          ? parsed.href
+          : '';
+      } catch {
+        return '';
+      }
+    };
+
+    const candidates = [
+      ...new Set(
+        [cleanUrl(primaryUrl), cleanUrl(fallbackUrl)].filter(Boolean)
+      )
+    ];
+
+    element.style.backgroundSize = 'cover';
+    element.style.backgroundPosition = 'center center';
+    element.style.backgroundRepeat = 'no-repeat';
+    element.style.backgroundColor = '#111';
+
+    const applyImage = url => {
+      if (url) {
+        const safeUrl = url.replace(/["\\]/g, '');
+
+        element.style.backgroundImage =
+          `linear-gradient(90deg, rgba(8,8,8,.45) 0%, rgba(8,8,8,.16) 65%, rgba(8,8,8,.08) 100%), linear-gradient(0deg, rgba(8,8,8,.22), transparent), url("${safeUrl}")`;
+      } else {
+        element.style.backgroundImage =
+          'linear-gradient(135deg, #151515, #303030)';
+      }
+    };
+
+    const tryCandidate = index => {
+      if (requestId !== backdropRequestId) return;
+
+      if (index >= candidates.length) {
+        applyImage('');
+        element.dataset.backdropLoaded = 'false';
+
+        console.warn(
+          'CineWeb: Backdrop and poster URLs could not load.'
+        );
+
+        return;
+      }
+
+      const url = candidates[index];
+      const image = new Image();
+
+      image.onload = () => {
+        if (requestId !== backdropRequestId) return;
+
+        applyImage(url);
+        element.dataset.backdropLoaded = 'true';
+      };
+
+      image.onerror = () => {
+        tryCandidate(index + 1);
+      };
+
+      image.src = url;
+    };
+
+    tryCandidate(0);
+  }
 
   function showHero(movie) {
     if (!movie) return;
@@ -410,7 +495,7 @@
     featuredMovie = movie;
 
     if ($('heroTitle')) {
-      $('heroTitle').textContent = movie.title;
+      $('heroTitle').textContent = movie.title || 'Featured Movie';
     }
 
     if ($('heroMeta')) {
@@ -430,12 +515,11 @@
     if (backdrop) {
       backdrop.classList.add('cw-changing');
 
-      const imageUrl = String(movie.backdrop || movie.poster || '')
-        .replace(/["\\]/g, '');
-
-      backdrop.style.backgroundImage = imageUrl
-        ? `linear-gradient(90deg,#080808 5%,rgba(8,8,8,.7)),url("${imageUrl}")`
-        : 'linear-gradient(90deg,#080808 5%,rgba(8,8,8,.7))';
+      setBackdropImage(
+        backdrop,
+        movie.backdrop,
+        movie.poster
+      );
 
       window.setTimeout(() => {
         backdrop.classList.remove('cw-changing');
@@ -539,12 +623,11 @@
     const detailBackdrop = $('detailBackdrop');
 
     if (detailBackdrop) {
-      const imageUrl = String(movie.backdrop || movie.poster || '')
-        .replace(/["\\]/g, '');
-
-      detailBackdrop.style.backgroundImage = imageUrl
-        ? `linear-gradient(90deg,#080808 5%,rgba(8,8,8,.7)),url("${imageUrl}")`
-        : 'linear-gradient(90deg,#080808 5%,rgba(8,8,8,.7))';
+      setBackdropImage(
+        detailBackdrop,
+        movie.backdrop,
+        movie.poster
+      );
     }
 
     const telegram = $('telegramButton');
@@ -621,7 +704,9 @@
     $('closeTrailer')?.addEventListener('click', closeTrailerModal);
 
     $('trailerModal')?.addEventListener('click', event => {
-      if (event.target === $('trailerModal')) closeTrailerModal();
+      if (event.target === $('trailerModal')) {
+        closeTrailerModal();
+      }
     });
 
     document.addEventListener('keydown', event => {
@@ -677,11 +762,15 @@
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || `Server returned ${response.status}`);
+        throw new Error(
+          result.error || `Server returned ${response.status}`
+        );
       }
 
       if (!Array.isArray(result)) {
-        throw new Error('The movie API returned an unexpected response.');
+        throw new Error(
+          'The movie API returned an unexpected response.'
+        );
       }
 
       movies = result;
@@ -754,6 +843,7 @@
       renderDetail();
     } catch (error) {
       console.error('CineWeb loading error:', error);
+
       showEmpty(
         error.message ||
         'Unable to load movies. Check Supabase and Vercel configuration.'
@@ -764,9 +854,9 @@
   }
 
   window.openMovie = id => {
-    location.href = `movie-details.html?id=${encodeURIComponent(id)}`;
+    location.href =
+      `movie-details.html?id=${encodeURIComponent(id)}`;
   };
 
   document.addEventListener('DOMContentLoaded', init);
 })();
-      
