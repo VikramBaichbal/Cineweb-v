@@ -223,7 +223,7 @@
     const config = window.APP_CONFIG || {};
 
     const raw = String(
-      config.INSTAGRAM_USERNAME || 'your_instagram_username'
+      config.INSTAGRAM_USERNAME || 'nyctophile__307'
     ).trim().replace(/^@/, '');
 
     const link = $('instagramLink');
@@ -317,7 +317,7 @@
             src="${escapeHtml(movie.poster || '')}"
             alt="${escapeHtml(movie.title)} poster"
             loading="lazy"
-            onerror="this.style.opacity='.15'">
+            onerror="this.onerror=null;this.style.opacity='1';this.src='/images/poster-placeholder.png'">
 
           <span class="rating">★ ${escapeHtml(movie.rating)}</span>
           <span class="lang">${escapeHtml(movie.language)}</span>
@@ -668,7 +668,7 @@
 
     if (watchlist) {
       watchlist.textContent = list.includes(Number(movie.id))
-        ? '♥ In Watchlist'
+        ? '❤️ In Watchlist'
         : '♡ Add to Watchlist';
 
       watchlist.onclick = () => {
